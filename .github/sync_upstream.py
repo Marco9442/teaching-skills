@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 
 UPSTREAM_URL = "https://github.com/YujxZJCN/teaching-skills.git"
-KEEP_ROOT = {".git", ".github"}
+KEEP_ROOT = {".git", ".github", "README.md"}
 SKIP_DIRS = {".git", "__pycache__", ".github"}
 TEXT_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".txt", ".py", ".toml"}
 PATH_RE = re.compile(
