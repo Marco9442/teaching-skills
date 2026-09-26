@@ -1,0 +1,47 @@
+name: Sync upstream
+
+on:
+  schedule:
+    # 每 6 小时。GitHub 用 UTC，允许延迟。
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Rebuild skills from upstream
+        run: python3 .github/sync_upstream.py
+
+      - name: Publish changes
+        run: |
+          set -euo pipefail
+          : "${UPSTREAM_SHA:?missing upstream sha}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "sync: upstream@${UPSTREAM_SHA}"
+            git push origin HEAD
+            exit 0
+          fi
+          # 公开仓库连续 60 天没有任何提交，GitHub 会关掉定时任务。
+          # 内容没变时，最多约三周补一次空提交，避免定时任务自己停掉。
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          if [ $((now - last)) -ge 1814400 ]; then
+            git commit --allow-empty -m "sync: keepalive upstream@${UPSTREAM_SHA}"
+            git push origin HEAD
+          fi
